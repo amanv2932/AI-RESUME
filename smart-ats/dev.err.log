@@ -1,0 +1,6 @@
+Please define the MONGODB_URI environment variable inside .env.local
+MongoDB URI is missing. Database operations will fail.
+MongoDB URI is missing. Database operations will fail.
+MongoDB URI is missing. Database operations will fail.
+MongoDB URI is missing. Database operations will fail.
+^C^C
