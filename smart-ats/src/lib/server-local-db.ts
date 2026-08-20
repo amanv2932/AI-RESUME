@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { randomUUID } from 'crypto';
 
 const DB_PATH = path.join(process.cwd(), 'database.json');
 
@@ -40,9 +41,17 @@ export async function getResume(id: string): Promise<ResumeSnapshotRecord | null
   return db[id] || null;
 }
 
+export async function deleteResume(id: string, userId: string): Promise<boolean> {
+  const db = readDb();
+  if (!db[id] || db[id].userId !== userId) return false;
+  delete db[id];
+  writeDb(db);
+  return true;
+}
+
 export async function saveResume(data: Omit<ResumeSnapshotRecord, '_id' | 'updatedAt' | 'createdAt'>): Promise<string> {
   const db = readDb();
-  const _id = Math.random().toString(36).substring(2, 10);
+  const _id = randomUUID();
   const now = new Date().toISOString();
   const record: ResumeSnapshotRecord = {
     ...data,
@@ -53,4 +62,17 @@ export async function saveResume(data: Omit<ResumeSnapshotRecord, '_id' | 'updat
   db[_id] = record;
   writeDb(db);
   return _id;
+}
+
+export async function updateResume(
+  id: string,
+  userId: string,
+  data: Omit<ResumeSnapshotRecord, '_id' | 'updatedAt' | 'createdAt'>
+): Promise<boolean> {
+  const db = readDb();
+  const existing = db[id];
+  if (!existing || existing.userId !== userId) return false;
+  db[id] = { ...existing, ...data, _id: id, updatedAt: new Date().toISOString() };
+  writeDb(db);
+  return true;
 }

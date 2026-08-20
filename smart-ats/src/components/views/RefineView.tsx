@@ -4,7 +4,7 @@ import { useResumeStore } from '@/store/useResumeStore';
 import ResumePreview from '@/components/preview/ResumePreview';
 import { buildResumePlainText } from '@/lib/resume-text';
 import { snapshotFromStore } from '@/lib/resume-snapshot';
-import { useRef, useState, useEffect } from 'react';
+import { useRef } from 'react';
 import { useReactToPrint } from 'react-to-print';
 import dynamic from 'next/dynamic';
 import { ResumePdfDocument } from '@/pdf/ResumePdfDocument';
@@ -16,12 +16,9 @@ const PDFDownloadLink = dynamic(
 
 export default function RefineView({ setView }: { setView: (v: string) => void }) {
   const store = useResumeStore();
-  const { atsScore, personalInfo, setPersonalInfo } = store;
+  const { atsScore, personalInfo, themeId, setThemeId } = store;
   const printRef = useRef<HTMLDivElement>(null);
-  const [linkedinLoading, setLinkedinLoading] = useState(false);
-  const [isClient, setIsClient] = useState(false);
-  
-  useEffect(() => { setIsClient(true); }, []);
+  const isClient = typeof window !== 'undefined';
 
   const handlePrint = useReactToPrint({
     contentRef: printRef,
@@ -55,28 +52,6 @@ export default function RefineView({ setView }: { setView: (v: string) => void }
     await navigator.clipboard.writeText(plain);
   };
 
-  const generateLinkedIn = async () => {
-    setLinkedinLoading(true);
-    try {
-      const res = await fetch('/api/linkedin-summary', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          personalInfo,
-          experience: store.experience,
-          skills: store.skills,
-          targetJob: store.targetJob,
-        }),
-      });
-      const data = await res.json();
-      if (res.ok && data.summary) {
-        setPersonalInfo({ linkedinSummary: data.summary });
-      }
-    } finally {
-      setLinkedinLoading(false);
-    }
-  };
-
   const snapshot = snapshotFromStore(useResumeStore.getState);
 
   return (
@@ -94,17 +69,32 @@ export default function RefineView({ setView }: { setView: (v: string) => void }
             <h2 className="text-3xl font-black text-primary tracking-tight">Review & export</h2>
           </div>
           <p className="text-on-surface-variant text-lg">
-            Finalize your professional resume. Download a high-quality PDF, print directly from the browser, or export ATS-friendly plain text.
+            Finalize your professional resume. Pick a theme, download a PDF, or export plain text.
           </p>
         </div>
 
         <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-8 space-y-6 text-center">
-          <span className="material-symbols-outlined text-[64px] text-emerald-500 mb-4 inline-block">verified</span>
+          <div className="mb-6 flex flex-col sm:flex-row items-center justify-center gap-4">
+            <label className="text-sm font-bold text-slate-700">Select Theme:</label>
+            <select 
+              value={themeId} 
+              onChange={(e) => setThemeId(e.target.value)} 
+              className="input-field max-w-xs bg-white text-sm"
+            >
+              <option value="modern">Modern (Default)</option>
+              <option value="classic">Classic / Traditional</option>
+              <option value="minimal">Minimal / Clean</option>
+              <option value="creative-blue">Creative Blue (Sidebar)</option>
+              <option value="executive-accent">Executive Accent (Colored)</option>
+            </select>
+          </div>
+
+          <span className="material-symbols-outlined text-[64px] text-slate-500 mb-4 inline-block">verified</span>
           <h3 className="text-2xl font-black text-slate-900 tracking-tight">Resume optimized & ready</h3>
           <p className="text-slate-600 max-w-lg mx-auto text-sm leading-relaxed mt-2">
-            Your <strong>AI-estimated ATS alignment score</strong> is{' '}
-            <span className="font-black text-emerald-600 underline underline-offset-4 decoration-emerald-200">{atsScore}%</span>. 
-            This reflects your match for the target role based on analyzed keywords, impact density, and formatting.
+            Your <strong>local ATS alignment score</strong> is{' '}
+            <span className="font-black text-slate-600 underline underline-offset-4 decoration-slate-200">{atsScore}%</span>. 
+            This reflects your match for the target role based on keywords and formatting.
           </p>
 
           <div className="my-8 w-full block lg:hidden">
@@ -159,35 +149,6 @@ export default function RefineView({ setView }: { setView: (v: string) => void }
               <span className="material-symbols-outlined text-sm">content_copy</span> Copy to clipboard
             </button>
           </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-8 space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <h4 className="text-lg font-black text-primary">LinkedIn “About”</h4>
-              <p className="text-sm text-slate-500 mt-1">Generated for your profile — not shown on the printed resume.</p>
-            </div>
-            <button
-              type="button"
-              disabled={linkedinLoading}
-              onClick={() => void generateLinkedIn()}
-              className="px-5 py-3 rounded-xl bg-slate-900 text-white font-bold text-sm hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2 shrink-0"
-            >
-              {linkedinLoading ? (
-                <span className="material-symbols-outlined animate-spin text-lg">autorenew</span>
-              ) : (
-                <span className="material-symbols-outlined text-lg">auto_awesome</span>
-              )}
-              Generate from resume
-            </button>
-          </div>
-          <textarea
-            value={personalInfo.linkedinSummary || ''}
-            onChange={(e) => setPersonalInfo({ linkedinSummary: e.target.value })}
-            rows={8}
-            placeholder="AI-generated summary appears here — edit freely."
-            className="input-field resize-y min-h-[160px] text-left text-sm"
-          />
         </div>
 
         <div className="pt-8 flex items-center justify-between border-t border-slate-200">

@@ -125,9 +125,9 @@ export default function PersonalView({ setView }: { setView: (v: string) => void
                   </div>
                   <button 
                     onClick={() => removeOther(entry.id)}
-                    className="p-2 text-slate-400 hover:text-rose-500 transition-colors"
+                    className="p-2 text-rose-500 font-bold hover:bg-rose-50 rounded transition-colors flex items-center gap-1 uppercase tracking-wider text-[10px]"
                   >
-                    <span className="material-symbols-outlined">delete</span>
+                    <span className="material-symbols-outlined text-sm">delete</span> Delete
                   </button>
                 </div>
               ))}

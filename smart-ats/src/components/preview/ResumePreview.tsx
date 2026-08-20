@@ -38,33 +38,11 @@ export default function ResumePreview() {
     skills,
     projects = [],
     certifications = [],
-    matchedKeywords = [],
     jobRolePreset,
-    jobAnalysis,
+    themeId,
   } = useResumeStore();
 
-  const highlightText = (text: string) => {
-    if (!text) return text;
-    if (!matchedKeywords.length) return text;
-    const escapedKeywords = matchedKeywords.map((k) => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-    const regex = new RegExp(`\\b(${escapedKeywords.join('|')})\\b`, 'gi');
-    const parts = text.split(regex);
-
-    return parts.map((part, i) =>
-      matchedKeywords.some((k) => k.toLowerCase() === part.toLowerCase()) ? (
-        <span
-          key={i}
-          className="bg-emerald-100/80 text-emerald-900 px-1 rounded font-medium border-b-2 border-emerald-400"
-        >
-          {part}
-        </span>
-      ) : (
-        part
-      )
-    );
-  };
-
-  const sectionOrder = getResumeSectionOrder(jobRolePreset, jobAnalysis);
+  const sectionOrder = getResumeSectionOrder(jobRolePreset);
 
   const renderExperience = () =>
     experience.length > 0 ? (
@@ -75,13 +53,13 @@ export default function ResumePreview() {
             <div key={exp.id} className={styles.expItem}>
               <div className={styles.expHeader}>
                 <div>
-                  <div className={styles.role}>{highlightText(exp.role || 'Job Title')}</div>
-                  <div className={styles.company}>{highlightText(exp.company || 'Company')}</div>
+                  <div className={styles.role}>{exp.role || 'Job Title'}</div>
+                  <div className={styles.company}>{exp.company || 'Company'}</div>
                 </div>
                 <span className={styles.duration}>{exp.duration}</span>
               </div>
               <ul className={styles.bulletList}>
-                {exp.bullets.map((bullet, idx) => (bullet ? <li key={idx}>{highlightText(bullet)}</li> : null))}
+                {exp.bullets.map((bullet, idx) => (bullet ? <li key={idx}>{bullet}</li> : null))}
               </ul>
             </div>
           ))}
@@ -101,7 +79,7 @@ export default function ResumePreview() {
                 <div className={styles.expHeader}>
                   <div className="w-full">
                     <div className="flex justify-between items-baseline mb-1">
-                      <div className={styles.role}>{highlightText(p.name || 'Project')}</div>
+                      <div className={styles.role}>{p.name || 'Project'}</div>
                       {p.projectLink?.trim() && (
                          <div className="text-[10px] font-bold">
                            <a href={p.projectLink.startsWith('http') ? p.projectLink : `https://${p.projectLink}`} target="_blank" rel="noopener noreferrer" className="text-sky-600 hover:underline transition-colors">
@@ -113,14 +91,14 @@ export default function ResumePreview() {
                     {p.techStack.trim() && (
                       <div className={styles.company}>
                         <span className="text-[10px] uppercase tracking-widest text-slate-400 font-bold mr-2">Stack:</span>
-                        {highlightText(p.techStack.trim())}
+                        {p.techStack.trim()}
                       </div>
                     )}
                   </div>
                 </div>
                 {p.description.trim() && (
                   <p className={`${styles.projectBody} mt-2 text-justify`}>
-                    {highlightText(p.description.trim())}
+                    {p.description.trim()}
                   </p>
                 )}
               </div>
@@ -139,8 +117,13 @@ export default function ResumePreview() {
             <div key={edu.id} className={styles.expItem}>
               <div className={styles.expHeader}>
                 <div>
-                  <div className={styles.role}>{highlightText(edu.degree || 'Degree')}</div>
-                  <div className={styles.company}>{highlightText(edu.institution || 'Institution')}</div>
+                  <div className={styles.role}>{edu.degree || 'Degree'}</div>
+                  <div className={styles.company}>
+                    {edu.institution || 'Institution'}
+                    {edu.scoreValue && (
+                      <span className="text-slate-900 font-bold ml-1"> | {edu.scoreType || 'Score'}: {edu.scoreValue}</span>
+                    )}
+                  </div>
                 </div>
                 <span className={styles.duration}>
                   {edu.startDate ? `${edu.startDate} — ` : ''}
@@ -160,7 +143,7 @@ export default function ResumePreview() {
         <div className={styles.skillsList}>
           {skills.map((skill) => (
             <span key={skill.id} className={styles.skillItem}>
-              • {highlightText(skill.name)}
+              • {skill.name}
             </span>
           ))}
         </div>
@@ -178,9 +161,9 @@ export default function ResumePreview() {
               <div key={c.id} className={styles.expItem}>
                 <div className={styles.expHeader}>
                   <div>
-                    <div className={styles.role}>{highlightText(c.name)}</div>
+                    <div className={styles.role}>{c.name}</div>
                     <div className={styles.company}>
-                      {highlightText(c.issuer)}
+                      {c.issuer}
                       {c.date ? ` • ${c.date}` : ''}
                     </div>
                   </div>
@@ -209,30 +192,76 @@ export default function ResumePreview() {
     }
   };
 
-  return (
-    <div className={styles.resumeDocument} id="resume-preview">
-      <div className={styles.header}>
-        <h1 className={styles.name}>{personalInfo.fullName || 'Your Name'}</h1>
-        {personalInfo.title?.trim() && (
-          <p className={styles.titleLine}>{highlightText(personalInfo.title.trim())}</p>
-        )}
-        <div className={styles.contactInfo}>
-          {personalInfo.email && <span className={styles.contactItem}>{personalInfo.email}</span>}
-          {personalInfo.phone && <span className={styles.contactItem}> • {personalInfo.phone}</span>}
-          {personalInfo.location && <span className={styles.contactItem}> • {personalInfo.location}</span>}
-          <SmartLink value={personalInfo.linkedin} prefix="linkedin" />
-          <SmartLink value={personalInfo.github} prefix="github" />
-          <SmartLink value={personalInfo.portfolio} prefix="portfolio" />
-          {personalInfo.otherEntries?.map((entry) => (
-            <SmartLink key={entry.id} value={entry.value} prefix={entry.label} />
-          ))}
-        </div>
-      </div>
-
-      {sectionOrder.map((k) => (
-        <div key={k}>{renderByKey(k)}</div>
+  const renderContactInfo = () => (
+    <div className={styles.contactInfo}>
+      {personalInfo.email && <span className={styles.contactItem}>{personalInfo.email}</span>}
+      {personalInfo.phone && <span className={styles.contactItem}> • {personalInfo.phone}</span>}
+      {personalInfo.location && <span className={styles.contactItem}> • {personalInfo.location}</span>}
+      <SmartLink value={personalInfo.linkedin} prefix="linkedin" />
+      <SmartLink value={personalInfo.github} prefix="github" />
+      <SmartLink value={personalInfo.portfolio} prefix="portfolio" />
+      {personalInfo.otherEntries?.map((entry) => (
+        <SmartLink key={entry.id} value={entry.value} prefix={entry.label} />
       ))}
     </div>
   );
-}
 
+  return (
+    <div className={styles.resumeDocument} id="resume-preview" data-theme={themeId || 'modern'}>
+      {themeId === 'creative-blue' ? (
+        <div className={styles.twoColumnLayout}>
+          <div className={styles.leftColumn}>
+            <div className={styles.sidebarHeader}>
+              <h1 className={styles.sidebarName}>{personalInfo.fullName || 'Your Name'}</h1>
+              {personalInfo.title?.trim() && (
+                <p className={styles.sidebarTitle}>{personalInfo.title.trim()}</p>
+              )}
+            </div>
+            
+            <div className={styles.sidebarSection}>
+              <h2 className={styles.sidebarSectionTitle}>Contact</h2>
+              <div className={styles.sidebarContactList}>
+                {personalInfo.email && <div className={styles.sidebarContactItem}>{personalInfo.email}</div>}
+                {personalInfo.phone && <div className={styles.sidebarContactItem}>{personalInfo.phone}</div>}
+                {personalInfo.location && <div className={styles.sidebarContactItem}>{personalInfo.location}</div>}
+                {personalInfo.linkedin && <div className={styles.sidebarContactItem}>{personalInfo.linkedin}</div>}
+                {personalInfo.portfolio && <div className={styles.sidebarContactItem}>{personalInfo.portfolio}</div>}
+              </div>
+            </div>
+
+            <div className={styles.sidebarSection}>
+              {renderByKey('skills')}
+            </div>
+            
+            <div className={styles.sidebarSection}>
+              {renderByKey('education')}
+            </div>
+
+            <div className={styles.sidebarSection}>
+              {renderByKey('certifications')}
+            </div>
+          </div>
+
+          <div className={styles.rightColumn}>
+             {renderByKey('experience')}
+             {renderByKey('projects')}
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className={styles.header}>
+            <h1 className={styles.name}>{personalInfo.fullName || 'Your Name'}</h1>
+            {personalInfo.title?.trim() && (
+              <p className={styles.titleLine}>{personalInfo.title.trim()}</p>
+            )}
+            {renderContactInfo()}
+          </div>
+
+          {sectionOrder.map((k) => (
+            <div key={k}>{renderByKey(k)}</div>
+          ))}
+        </>
+      )}
+    </div>
+  );
+}

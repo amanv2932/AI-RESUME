@@ -15,8 +15,10 @@ import {
   firebaseGetResumeSnapshot,
   firebaseListResumeSnapshots,
   firebaseSaveResumeSnapshot,
+  firebaseDeleteResumeSnapshot,
   isFirebaseConfigured,
 } from '@/lib/firebase-client';
+import { deleteLocalSnapshot } from '@/lib/local-snapshots';
 
 type ListItem = {
   backendKey: string;
@@ -52,8 +54,6 @@ export default function DashboardView({ setView }: { setView: (v: string) => voi
       const res = await fetch(`/api/resumes?userId=${encodeURIComponent(userId)}`);
       const data = await res.json();
       const isLocalServer = !!data.isFallback;
-      const mongoConfigured = !isLocalServer;
-
       if (res.ok && Array.isArray(data.items)) {
         merged.push(
           ...data.items.map(
@@ -180,12 +180,12 @@ export default function DashboardView({ setView }: { setView: (v: string) => voi
       if (!source || !id) return;
 
       if (source === 'mongo') {
-        const res = await fetch(`/api/resumes/${id}`);
+        const res = await fetch(`/api/resumes/${id}?userId=${encodeURIComponent(getOrCreateUserId())}`);
         const data = await res.json();
         if (!res.ok || !data.snapshot) return;
         hydrateFromSnapshot(data.snapshot);
       } else if (source === 'firebase') {
-        const snap = await firebaseGetResumeSnapshot(id);
+        const snap = await firebaseGetResumeSnapshot(id, getOrCreateUserId());
         if (!snap) return;
         hydrateFromSnapshot(snap);
       } else if (source === 'local') {
@@ -199,6 +199,25 @@ export default function DashboardView({ setView }: { setView: (v: string) => voi
       setView('refine');
     } catch {
       setDbMessage('Could not load snapshot.');
+    }
+  };
+
+  const deleteItem = async (backendKey: string) => {
+    if (!confirm('Are you sure you want to delete this resume?')) return;
+    try {
+      const [source, id] = backendKey.split(':');
+      if (!source || !id) return;
+
+      if (source === 'mongo') {
+        await fetch(`/api/resumes/${id}?userId=${encodeURIComponent(getOrCreateUserId())}`, { method: 'DELETE' });
+      } else if (source === 'firebase') {
+        await firebaseDeleteResumeSnapshot(id, getOrCreateUserId());
+      } else if (source === 'local') {
+        deleteLocalSnapshot(id);
+      }
+      await refreshList();
+    } catch {
+      setDbMessage('Failed to delete snapshot.');
     }
   };
 
@@ -242,11 +261,11 @@ export default function DashboardView({ setView }: { setView: (v: string) => voi
       if (compareA !== 'current' && compareA !== 'custom' && compareA) {
         const [src, id] = compareA.split(':');
         if (src === 'mongo') {
-          const res = await fetch(`/api/resumes/${id}`);
+          const res = await fetch(`/api/resumes/${id}?userId=${encodeURIComponent(getOrCreateUserId())}`);
           const data = await res.json();
           L = textFromSnapshot(data.snapshot);
         } else if (src === 'firebase') {
-          L = textFromSnapshot(await firebaseGetResumeSnapshot(id));
+          L = textFromSnapshot(await firebaseGetResumeSnapshot(id, getOrCreateUserId()));
         } else if (src === 'local') {
           L = textFromSnapshot(getLocalSnapshot(id)?.snapshot);
         }
@@ -254,11 +273,11 @@ export default function DashboardView({ setView }: { setView: (v: string) => voi
       if (compareB !== 'current' && compareB !== 'custom' && compareB) {
         const [src, id] = compareB.split(':');
         if (src === 'mongo') {
-          const res = await fetch(`/api/resumes/${id}`);
+          const res = await fetch(`/api/resumes/${id}?userId=${encodeURIComponent(getOrCreateUserId())}`);
           const data = await res.json();
           R = textFromSnapshot(data.snapshot);
         } else if (src === 'firebase') {
-          R = textFromSnapshot(await firebaseGetResumeSnapshot(id));
+          R = textFromSnapshot(await firebaseGetResumeSnapshot(id, getOrCreateUserId()));
         } else if (src === 'local') {
           R = textFromSnapshot(getLocalSnapshot(id)?.snapshot);
         }
@@ -418,13 +437,22 @@ export default function DashboardView({ setView }: { setView: (v: string) => voi
             <p className="text-sm text-slate-500 mt-1 line-clamp-2">{item.targetPreview || 'No target note'}</p>
             <div className="flex justify-between items-center mt-4">
               <span className="text-emerald-600 font-black">{item.atsScore}%</span>
-              <button
-                type="button"
-                onClick={() => void loadSnapshot(item.backendKey)}
-                className="text-sm font-bold text-primary hover:underline"
-              >
-                Load
-              </button>
+              <div className="flex gap-4">
+                <button
+                  type="button"
+                  onClick={() => void deleteItem(item.backendKey)}
+                  className="text-sm font-bold text-red-500 hover:underline"
+                >
+                  Delete
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void loadSnapshot(item.backendKey)}
+                  className="text-sm font-bold text-primary hover:underline"
+                >
+                  Load
+                </button>
+              </div>
             </div>
             <p className="text-[10px] text-slate-400 mt-2">
               {item.updatedAt ? new Date(item.updatedAt).toLocaleString() : ''}
@@ -461,13 +489,22 @@ export default function DashboardView({ setView }: { setView: (v: string) => voi
                       <p className="font-bold text-slate-800">{item.name}</p>
                       <p className="text-xs text-slate-500">{item.targetPreview}</p>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => void loadSnapshot(item.backendKey)}
-                      className="text-sm font-bold text-primary"
-                    >
-                      Load
-                    </button>
+                    <div className="flex gap-4">
+                      <button
+                        type="button"
+                        onClick={() => void deleteItem(item.backendKey)}
+                        className="text-sm font-bold text-red-500 hover:underline"
+                      >
+                        Delete
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void loadSnapshot(item.backendKey)}
+                        className="text-sm font-bold text-primary hover:underline"
+                      >
+                        Load
+                      </button>
+                    </div>
                   </li>
                 ))}
               </ul>

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { getPresetById } from '@/lib/job-presets';
 
 function newId(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -28,6 +29,8 @@ export type Education = {
   institution: string;
   startDate: string;
   endDate: string;
+  scoreType?: 'CGPA' | 'Percentage';
+  scoreValue?: string;
 };
 
 export type Project = {
@@ -64,15 +67,6 @@ export type PersonalInfo = {
   otherEntries: PersonalOtherEntry[];
 };
 
-export type JobAnalysisMeta = {
-  domain: string;
-  missingSkillsOrWeakPoints: string;
-  requiredSkills: string[];
-  responsibilities: string[];
-  roleTransitionGuidance?: string;
-  actionableRecommendations?: string[];
-};
-
 const emptyPersonal: PersonalInfo = {
   fullName: '',
   email: '',
@@ -97,13 +91,13 @@ export interface ResumeState {
   jobRolePreset: string;
   autoTailorOnJobChange: boolean;
   atsScore: number;
-  /** Extracted / canonical keywords (prefer Gemini analyze-job); used for scoring & highlight */
+  themeId: string;
   keywords: string[];
   matchedKeywords: string[];
   missingKeywords: string[];
   suggestions: string[];
-  jobAnalysis: JobAnalysisMeta | null;
 
+  setThemeId: (themeId: string) => void;
   setPersonalInfo: (info: Partial<PersonalInfo>) => void;
   addExperience: (exp: Omit<Experience, 'id'>) => void;
   updateExperience: (id: string, exp: Partial<Experience>) => void;
@@ -123,15 +117,7 @@ export interface ResumeState {
   setJobRolePreset: (preset: string) => void;
   setAutoTailorOnJobChange: (v: boolean) => void;
   setKeywords: (keywords: string[]) => void;
-  setJobAnalysis: (meta: JobAnalysisMeta | null) => void;
   calculateAtsScore: () => void;
-  applyTailoringResult: (payload: {
-    optimizedExperience: { id: string; bullets: string[] }[];
-    suggestedSkills: { name: string; proficiency?: Skill['proficiency'] }[];
-    optimizedProjects?: { id: string; description: string; techStack?: string }[];
-    skillOrder?: string[];
-  }) => void;
-  /** Replace all builder state (e.g. load from cloud) */
   hydrateFromSnapshot: (partial: Partial<ResumeState> & Record<string, unknown>) => void;
 }
 
@@ -139,7 +125,6 @@ function normalizeKeyword(w: string): string {
   return w.trim().toLowerCase();
 }
 
-/** Match keyword against resume text blobs */
 function keywordMatchesResume(
   kw: string,
   state: Pick<ResumeState, 'skills' | 'experience' | 'education' | 'projects' | 'certifications' | 'personalInfo'>
@@ -164,13 +149,11 @@ function keywordMatchesResume(
   if (state.personalInfo.title) chunks.push(state.personalInfo.title);
   state.personalInfo.otherEntries.forEach((o) => chunks.push(o.label, o.value));
 
-  // Escaping regex chars just in case keywords have special symbols
   const escaped = k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const regex = new RegExp(`\\b${escaped}\\b`, 'i');
 
   return chunks.some((c) => c && regex.test(c));
 }
-
 
 export const useResumeStore = create<ResumeState>()(
   persist(
@@ -185,11 +168,13 @@ export const useResumeStore = create<ResumeState>()(
       jobRolePreset: '',
       autoTailorOnJobChange: true,
       atsScore: 0,
+      themeId: 'modern',
       keywords: [],
       matchedKeywords: [],
       missingKeywords: [],
       suggestions: [],
-      jobAnalysis: null,
+
+      setThemeId: (themeId) => set({ themeId }),
 
       setPersonalInfo: (info) =>
         set((state) => ({ personalInfo: { ...state.personalInfo, ...info } })),
@@ -273,7 +258,10 @@ export const useResumeStore = create<ResumeState>()(
         }, 400);
       },
 
-      setJobRolePreset: (preset) => set({ jobRolePreset: preset }),
+      setJobRolePreset: (preset) => {
+        set({ jobRolePreset: preset });
+        get().calculateAtsScore();
+      },
       setAutoTailorOnJobChange: (v) => set({ autoTailorOnJobChange: v }),
 
       setKeywords: (keywords) => {
@@ -282,15 +270,11 @@ export const useResumeStore = create<ResumeState>()(
         get().calculateAtsScore();
       },
 
-      setJobAnalysis: (meta) => set({ jobAnalysis: meta }),
-
       calculateAtsScore: () => {
         const state = get();
         const {
           targetJob,
           keywords: storedKeywords,
-          jobAnalysis,
-          jobRolePreset,
           skills,
           experience,
           education,
@@ -299,15 +283,15 @@ export const useResumeStore = create<ResumeState>()(
           personalInfo,
         } = state;
 
-        if (!targetJob.trim() && storedKeywords.length === 0) {
+        const presetKeywords = getPresetById(state.jobRolePreset)?.boostKeywords ?? [];
+
+        if (!targetJob.trim() && storedKeywords.length === 0 && presetKeywords.length === 0) {
           set({ atsScore: 0, matchedKeywords: [], missingKeywords: [] });
           return;
         }
 
-        const matchTokensRaw: string[] = [];
-        if (storedKeywords.length > 0) {
-          matchTokensRaw.push(...storedKeywords);
-        } else if (targetJob.trim()) {
+        const matchTokensRaw: string[] = [...storedKeywords, ...presetKeywords];
+        if (targetJob.trim()) {
           matchTokensRaw.push(
             ...new Set(
               targetJob
@@ -317,8 +301,6 @@ export const useResumeStore = create<ResumeState>()(
             )
           );
         }
-        if (jobAnalysis?.requiredSkills?.length) matchTokensRaw.push(...jobAnalysis.requiredSkills);
-        if (jobAnalysis?.responsibilities?.length) matchTokensRaw.push(...jobAnalysis.responsibilities);
 
         const matchTokens = [
           ...new Set(matchTokensRaw.map((k) => normalizeKeyword(k)).filter((k) => k.length > 2)),
@@ -420,9 +402,6 @@ export const useResumeStore = create<ResumeState>()(
         const missingKeywords = matchTokens.filter((t) => !matchedKeywords.includes(t)).slice(0, 20);
 
         const suggestions: string[] = [];
-        if (!storedKeywords.length) {
-          suggestions.push('Run “Extract keywords” to score against curated ATS terms instead of raw job text.');
-        }
         if (missingKeywords.length > 0) {
           suggestions.push(`Add or reflect missing keywords: ${missingKeywords.slice(0, 8).join(', ')}.`);
         }
@@ -436,9 +415,6 @@ export const useResumeStore = create<ResumeState>()(
           suggestions.push('Add phone or LinkedIn to strengthen recruiter contact confidence.');
         }
         if (projects.length === 0) suggestions.push('Add 1–2 relevant projects for extra keyword coverage.');
-        if (certifications.length === 0 && (jobRolePreset === 'data' || jobRolePreset === 'ml')) {
-          suggestions.push('Consider a relevant certification (e.g. cloud/analytics) if the posting lists it.');
-        }
 
         set({
           atsScore: Math.min(finalScore, 100),
@@ -446,62 +422,6 @@ export const useResumeStore = create<ResumeState>()(
           missingKeywords,
           suggestions: suggestions.slice(0, 10),
         });
-      },
-
-      applyTailoringResult: ({
-        optimizedExperience,
-        suggestedSkills,
-        optimizedProjects,
-        skillOrder,
-      }) => {
-        const { experience, skills, projects } = get();
-
-        const updatedExperience = experience.map((e) => {
-          const opt = optimizedExperience.find((o) => o.id === e.id);
-          return opt ? { ...e, bullets: opt.bullets } : e;
-        });
-
-        let updatedSkills = [...skills];
-        suggestedSkills.forEach((newSkill) => {
-          if (! updatedSkills.some((s) => s.name.toLowerCase() === newSkill.name.toLowerCase())) {
-            updatedSkills.push({
-              id: newId(),
-              name: newSkill.name,
-              proficiency: newSkill.proficiency || 'Intermediate',
-            });
-          }
-        });
-
-        if (skillOrder?.length) {
-          const orderLower = skillOrder.map((n) => n.toLowerCase());
-          updatedSkills = [...updatedSkills].sort((a, b) => {
-            const ia = orderLower.indexOf(a.name.toLowerCase());
-            const ib = orderLower.indexOf(b.name.toLowerCase());
-            const sa = ia === -1 ? 999 : ia;
-            const sb = ib === -1 ? 999 : ib;
-            if (sa !== sb) return sa - sb;
-            return a.name.localeCompare(b.name);
-          });
-        }
-
-        let updatedProjects = projects;
-        if (optimizedProjects?.length) {
-          updatedProjects = projects.map((p) => {
-            const op = optimizedProjects.find((o) => o.id === p.id);
-            return op ? { 
-              ...p, 
-              description: op.description, 
-              techStack: op.techStack ?? p.techStack 
-            } : p;
-          });
-        }
-
-        set({
-          experience: updatedExperience,
-          skills: updatedSkills,
-          projects: updatedProjects,
-        });
-        get().calculateAtsScore();
       },
 
       hydrateFromSnapshot: (snapshot) => {
@@ -520,7 +440,7 @@ export const useResumeStore = create<ResumeState>()(
           targetJob: typeof s.targetJob === 'string' ? s.targetJob : cur.targetJob,
           jobRolePreset: typeof s.jobRolePreset === 'string' ? s.jobRolePreset : cur.jobRolePreset,
           keywords: Array.isArray(s.keywords) ? s.keywords : cur.keywords,
-          jobAnalysis: s.jobAnalysis !== undefined ? s.jobAnalysis : cur.jobAnalysis,
+          themeId: typeof s.themeId === 'string' ? s.themeId : cur.themeId,
           autoTailorOnJobChange:
             typeof s.autoTailorOnJobChange === 'boolean'
               ? s.autoTailorOnJobChange
@@ -542,7 +462,7 @@ export const useResumeStore = create<ResumeState>()(
           jobRolePreset: typeof p.jobRolePreset === 'string' ? p.jobRolePreset : current.jobRolePreset,
           autoTailorOnJobChange:
             typeof p.autoTailorOnJobChange === 'boolean' ? p.autoTailorOnJobChange : true,
-          jobAnalysis: p.jobAnalysis ?? null,
+          themeId: typeof p.themeId === 'string' ? p.themeId : current.themeId,
           keywords: Array.isArray(p.keywords) ? p.keywords : current.keywords,
           suggestions: Array.isArray((p as Partial<ResumeState>).suggestions)
             ? ((p as Partial<ResumeState>).suggestions as string[])

@@ -51,3 +51,8 @@ export function addLocalSnapshot(item: Omit<LocalSnapshotItem, 'id' | 'updatedAt
 export function getLocalSnapshot(id: string): LocalSnapshotItem | null {
   return readAll().find((x) => x.id === id) ?? null;
 }
+
+export function deleteLocalSnapshot(id: string): void {
+  const all = readAll().filter((x) => x.id !== id);
+  writeAll(all);
+}

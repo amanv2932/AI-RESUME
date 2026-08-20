@@ -8,6 +8,7 @@ import { snapshotFromStore } from '@/lib/resume-snapshot';
 export default function AutosaveGuard() {
   const store = useResumeStore();
   const lastSavedJson = useRef<string>('');
+  const savedId = useRef<string | null>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -30,6 +31,7 @@ export default function AutosaveGuard() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             userId,
+            id: savedId.current,
             name: store.personalInfo.fullName ? `${store.personalInfo.fullName} — autosave` : 'Autosaved Resume',
             snapshot,
             atsScore: store.atsScore,
@@ -38,6 +40,8 @@ export default function AutosaveGuard() {
         });
 
         if (res.ok) {
+          const data = (await res.json()) as { id?: string };
+          savedId.current = data.id ?? savedId.current;
           lastSavedJson.current = currentJson;
           console.log('[Autosave] Synced to database.json');
         }

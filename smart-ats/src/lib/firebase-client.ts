@@ -10,6 +10,7 @@ import {
   query,
   serverTimestamp,
   where,
+  deleteDoc,
   type Firestore,
 } from 'firebase/firestore';
 import type { ResumeSnapshotPayload } from '@/lib/resume-snapshot';
@@ -92,12 +93,22 @@ export async function firebaseListResumeSnapshots(userId: string): Promise<Fireb
   return items.sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1));
 }
 
-export async function firebaseGetResumeSnapshot(id: string): Promise<ResumeSnapshotPayload | null> {
+export async function firebaseGetResumeSnapshot(id: string, userId: string): Promise<ResumeSnapshotPayload | null> {
   const fb = getFirebase();
   if (!fb) return null;
   const ref = doc(fb.db, 'resumeSnapshots', id);
   const s = await getDoc(ref);
   if (!s.exists()) return null;
   const data = s.data() as Record<string, unknown>;
+  if (data.userId !== userId) return null;
   return (data.snapshot as ResumeSnapshotPayload) ?? null;
+}
+
+export async function firebaseDeleteResumeSnapshot(id: string, userId: string): Promise<void> {
+  const fb = getFirebase();
+  if (!fb) return;
+  const ref = doc(fb.db, 'resumeSnapshots', id);
+  const snapshot = await getDoc(ref);
+  if (!snapshot.exists() || snapshot.data().userId !== userId) return;
+  await deleteDoc(ref);
 }

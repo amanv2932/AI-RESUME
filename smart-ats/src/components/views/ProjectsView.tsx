@@ -1,47 +1,8 @@
 "use client";
-import { useState } from 'react';
 import { useResumeStore } from '@/store/useResumeStore';
 
 export default function ProjectsView({ setView }: { setView: (v: string) => void }) {
-  const { projects, updateProject, addProject, removeProject, targetJob } = useResumeStore();
-  const [optimizingId, setOptimizingId] = useState<string | null>(null);
-
-  const handleAutoOptimize = async (id: string, name: string, description: string, techStack: string) => {
-    if (!description.trim()) {
-      alert("Please provide a description first before optimizing.");
-      return;
-    }
-    setOptimizingId(id);
-    try {
-      const res = await fetch('/api/optimize-project', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, description, techStack, targetJob }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Project optimization failed');
-      }
-      if (data.description) {
-        updateProject(id, { 
-          description: data.description, 
-          techStack: data.techStack || techStack 
-        });
-      }
-      if (data.isFallback) {
-        const fallbackMessage =
-          typeof data.message === 'string' && data.message.trim()
-            ? data.message
-            : 'Project optimization used fallback formatting instead of AI.';
-        alert(fallbackMessage);
-      }
-    } catch (err) {
-      console.error("Project optimization failed:", err);
-      alert("Project optimization failed. Please check your internet connection or API key and try again.");
-    } finally {
-      setOptimizingId(null);
-    }
-  };
+  const { projects, updateProject, addProject, removeProject } = useResumeStore();
 
   const handleNext = () => {
     setView('certifications');
@@ -89,23 +50,6 @@ export default function ProjectsView({ setView }: { setView: (v: string) => void
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Description</label>
-                    <button
-                      onClick={() => handleAutoOptimize(p.id, p.name, p.description, p.techStack)}
-                      disabled={optimizingId === p.id}
-                      className="text-[10px] font-black text-secondary flex items-center gap-1.5 hover:underline disabled:opacity-50"
-                    >
-                      {optimizingId === p.id ? (
-                        <div className="flex items-center gap-1.5 animate-pulse-subtle">
-                          <span className="material-symbols-outlined text-sm animate-spin">sync</span>
-                          OPTIMIZING...
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-1 group-hover:scale-105 transition-transform">
-                          <span className="material-symbols-outlined text-sm">auto_fix_high</span>
-                          Auto-Optimize
-                        </div>
-                      )}
-                    </button>
                   </div>
                   <textarea
                     value={p.description}

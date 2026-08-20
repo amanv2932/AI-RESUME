@@ -2,7 +2,6 @@ import type {
   Certification,
   Education,
   Experience,
-  JobAnalysisMeta,
   PersonalInfo,
   Project,
   ResumeState,
@@ -19,9 +18,9 @@ export type ResumeSnapshotPayload = {
   targetJob: string;
   jobRolePreset: string;
   keywords: string[];
-  jobAnalysis: JobAnalysisMeta | null;
   atsScore: number;
   autoTailorOnJobChange: boolean;
+  themeId: string;
 };
 
 export function snapshotFromStore(getState: () => ResumeState): ResumeSnapshotPayload {
@@ -36,8 +35,8 @@ export function snapshotFromStore(getState: () => ResumeState): ResumeSnapshotPa
     targetJob: s.targetJob,
     jobRolePreset: s.jobRolePreset,
     keywords: s.keywords,
-    jobAnalysis: s.jobAnalysis,
     atsScore: s.atsScore,
     autoTailorOnJobChange: s.autoTailorOnJobChange,
+    themeId: s.themeId,
   };
 }

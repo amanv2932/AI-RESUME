@@ -5,7 +5,7 @@ export default function EducationView({ setView }: { setView: (v: string) => voi
   const { education, updateEducation, addEducation, removeEducation } = useResumeStore();
 
   const handleAddEducation = () => {
-    addEducation({ degree: '', institution: '', startDate: '', endDate: '' });
+    addEducation({ degree: '', institution: '', startDate: '', endDate: '', scoreType: 'Percentage', scoreValue: '' });
   };
 
   const handleNext = () => {
@@ -32,7 +32,7 @@ export default function EducationView({ setView }: { setView: (v: string) => voi
         </div>
 
         <div className="space-y-6">
-          {education.map((edu, index) => (
+          {education.map((edu) => (
              <div key={edu.id} className="bg-white rounded-xl shadow-sm border border-slate-100 p-8 space-y-6 relative group transition-all">
                <button onClick={() => removeEducation(edu.id)} className="absolute top-4 right-4 text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity">
                  <span className="material-symbols-outlined">delete</span>
@@ -56,6 +56,29 @@ export default function EducationView({ setView }: { setView: (v: string) => voi
                  <div className="space-y-2">
                    <label className="text-xs font-bold uppercase tracking-wider text-slate-500">End Date</label>
                    <input value={edu.endDate} onChange={(e) => updateEducation(edu.id, { endDate: e.target.value })} type="text" placeholder="May 2022" className="input-field" />
+                 </div>
+               </div>
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                 <div className="space-y-2">
+                   <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Score Type</label>
+                   <select 
+                     value={edu.scoreType || 'Percentage'} 
+                     onChange={(e) => updateEducation(edu.id, { scoreType: e.target.value as 'CGPA' | 'Percentage' })} 
+                     className="input-field bg-white"
+                   >
+                     <option value="Percentage">Percentage</option>
+                     <option value="CGPA">CGPA</option>
+                   </select>
+                 </div>
+                 <div className="space-y-2">
+                   <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Score</label>
+                   <input 
+                     value={edu.scoreValue || ''} 
+                     onChange={(e) => updateEducation(edu.id, { scoreValue: e.target.value })} 
+                     type="text" 
+                     placeholder={edu.scoreType === 'CGPA' ? "8.5" : "85"} 
+                     className="input-field" 
+                   />
                  </div>
                </div>
              </div>

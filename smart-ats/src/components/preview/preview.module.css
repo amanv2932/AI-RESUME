@@ -3,13 +3,55 @@
   color: #1a202c;
   width: 100%;
   max-width: 21cm; /* Standard A4 Width */
-  min-height: 29.7cm; /* Standard A4 Height */
   padding: 60px;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
   border-radius: 8px;
   box-sizing: border-box;
+}
+
+/* Classic Theme Overrides */
+.resumeDocument[data-theme="classic"] {
+  font-family: "Times New Roman", Times, serif;
+}
+.resumeDocument[data-theme="classic"] .header {
+  text-align: center;
+  border-bottom: 2px solid #000;
+}
+.resumeDocument[data-theme="classic"] .contactInfo {
+  justify-content: center;
+}
+.resumeDocument[data-theme="classic"] .name {
+  text-transform: capitalize;
+  letter-spacing: normal;
+}
+.resumeDocument[data-theme="classic"] .sectionTitle {
+  text-transform: capitalize;
+  letter-spacing: normal;
+}
+.resumeDocument[data-theme="classic"] .role,
+.resumeDocument[data-theme="classic"] .company,
+.resumeDocument[data-theme="classic"] .duration {
+  font-family: "Times New Roman", Times, serif;
+}
+
+/* Minimal Theme Overrides */
+.resumeDocument[data-theme="minimal"] {
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  padding: 80px 70px;
+  line-height: 1.6;
+}
+.resumeDocument[data-theme="minimal"] .header {
+  border-bottom: none;
+  margin-bottom: 20px;
+}
+.resumeDocument[data-theme="minimal"] .name {
+  font-size: 28pt;
+  font-weight: 700;
+}
+.resumeDocument[data-theme="minimal"] .sectionTitle {
+  border-bottom: none;
 }
 
 .header {
@@ -121,6 +163,115 @@
   margin-bottom: 4px;
 }
 
+/* Creative Blue Theme Overrides */
+.resumeDocument[data-theme="creative-blue"] {
+  padding: 0;
+  display: flex;
+}
+.twoColumnLayout {
+  display: flex;
+  width: 100%;
+  min-height: 29.7cm;
+}
+.leftColumn {
+  width: 35%;
+  background-color: #1e3a8a; /* deep blue */
+  color: white;
+  padding: 40px 30px;
+}
+.rightColumn {
+  width: 65%;
+  padding: 40px 30px;
+  background-color: white;
+}
+.leftColumn .sidebarName {
+  font-size: 24pt;
+  font-weight: 800;
+  color: white;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+  line-height: 1.1;
+}
+.leftColumn .sidebarTitle {
+  font-size: 11pt;
+  color: #93c5fd;
+  margin-bottom: 30px;
+  font-weight: 600;
+}
+.leftColumn .sidebarSectionTitle {
+  font-size: 10pt;
+  font-weight: 800;
+  color: #bfdbfe;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  border-bottom: 1px solid #3b82f6;
+  padding-bottom: 4px;
+  margin-bottom: 12px;
+}
+.leftColumn .sidebarContactList {
+  font-size: 9pt;
+  color: #e0e7ff;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 30px;
+}
+.leftColumn .sidebarSection {
+  margin-bottom: 24px;
+}
+.leftColumn .sectionTitle {
+  font-size: 10pt;
+  font-weight: 800;
+  color: #bfdbfe;
+  border-bottom: 1px solid #3b82f6;
+  padding-bottom: 4px;
+}
+.leftColumn .role {
+  color: white;
+}
+.leftColumn .company, .leftColumn .duration {
+  color: #93c5fd;
+}
+.leftColumn .skillsList {
+  columns: 1;
+  color: #e0e7ff;
+}
+.leftColumn .text-slate-900 {
+  color: white;
+}
+
+/* Executive Accent Theme Overrides */
+.resumeDocument[data-theme="executive-accent"] {
+  font-family: 'Georgia', serif;
+}
+.resumeDocument[data-theme="executive-accent"] .header {
+  background-color: #0f172a; /* slate-900 */
+  color: white;
+  padding: 40px;
+  margin: -60px -60px 40px -60px; /* pull to edges */
+  text-align: center;
+}
+.resumeDocument[data-theme="executive-accent"] .name {
+  color: white;
+  font-family: 'Helvetica Neue', sans-serif;
+  font-size: 28pt;
+}
+.resumeDocument[data-theme="executive-accent"] .titleLine {
+  color: #cbd5e1;
+}
+.resumeDocument[data-theme="executive-accent"] .contactInfo {
+  color: #94a3b8;
+  justify-content: center;
+}
+.resumeDocument[data-theme="executive-accent"] .contactItem a {
+  color: #94a3b8;
+}
+.resumeDocument[data-theme="executive-accent"] .sectionTitle {
+  color: #b91c1c; /* red-700 accent */
+  border-bottom: 2px solid #b91c1c;
+  font-family: 'Helvetica Neue', sans-serif;
+}
+
 @media print {
   .resumeDocument {
     box-shadow: none !important;
@@ -131,4 +282,3 @@
     border-radius: 0 !important;
   }
 }
-

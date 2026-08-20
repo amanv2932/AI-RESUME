@@ -40,8 +40,8 @@ export default function CertificationsView({ setView }: { setView: (v: string) =
                 <span className="material-symbols-outlined">delete</span>
               </button>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="space-y-2 md:col-span-1">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
                   <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
                     Name <span className="text-rose-500">*</span>
                   </label>
@@ -65,6 +65,8 @@ export default function CertificationsView({ setView }: { setView: (v: string) =
                     className="input-field"
                   />
                 </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
                 <div className="space-y-2">
                   <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Date</label>
                   <input

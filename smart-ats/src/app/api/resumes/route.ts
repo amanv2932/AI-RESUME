@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/mongoose';
 import ResumeSnapshot from '@/models/ResumeSnapshot';
-import { listResumes, saveResume } from '@/lib/server-local-db';
+import { listResumes, saveResume, updateResume } from '@/lib/server-local-db';
 
 export async function GET(req: Request) {
   try {
@@ -41,12 +41,22 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { userId, name, snapshot, atsScore = 0, targetPreview = '' } = body;
+    const { id: requestedId, userId, name, snapshot, atsScore = 0, targetPreview = '' } = body;
     if (!userId || !snapshot || typeof snapshot !== 'object') {
       return NextResponse.json({ error: 'userId and snapshot object required' }, { status: 400 });
     }
     const conn = await connectToDatabase();
     if (!conn || !process.env.MONGODB_URI) {
+      if (typeof requestedId === 'string' && requestedId) {
+        const updated = await updateResume(requestedId, userId, {
+          userId,
+          name: name || 'Saved resume',
+          atsScore: Number(atsScore) || 0,
+          targetPreview: String(targetPreview).slice(0, 200),
+          snapshot,
+        });
+        if (updated) return NextResponse.json({ ok: true, id: requestedId, isFallback: true });
+      }
       const id = await saveResume({
         userId,
         name: name || 'Saved resume',
@@ -59,6 +69,22 @@ export async function POST(req: Request) {
         id,
         isFallback: true,
       });
+    }
+    if (typeof requestedId === 'string' && requestedId) {
+      if (!mongoose.isValidObjectId(requestedId)) {
+        return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
+      }
+      const updated = await ResumeSnapshot.findOneAndUpdate(
+        { _id: requestedId, userId },
+        {
+          name: name || 'Saved resume',
+          atsScore: Number(atsScore) || 0,
+          targetPreview: String(targetPreview).slice(0, 200),
+          snapshot,
+        },
+        { new: true }
+      );
+      if (updated) return NextResponse.json({ ok: true, id: requestedId });
     }
     const doc = await ResumeSnapshot.create({
       userId,
