@@ -9,6 +9,8 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.0",
+    "@capacitor/core": "^8.5.0",
     "@google/genai": "^1.48.0",
     "@google/generative-ai": "^0.21.0",
     "@react-pdf/renderer": "^4.3.2",
@@ -21,6 +23,7 @@
     "zustand": "^5.0.12"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.5.0",
     "@tailwindcss/container-queries": "^0.1.1",
     "@tailwindcss/forms": "^0.5.11",
     "@tailwindcss/typography": "^0.5.19",
